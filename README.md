@@ -1,3 +1,9 @@
+# Docker Local Git Server
+
+A simple local git server for Docker
+
+### Example `docker-compose.yml`:
+```yml
 services:
   git:
     build: .
@@ -7,3 +13,4 @@ services:
     volumes:
       - ./data:/srv/data:Z
       - ./keys:/etc/ssh/keys:Z
+```
