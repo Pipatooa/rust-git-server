@@ -8,11 +8,15 @@ RUN sed -i /etc/ssh/sshd_config \
     -e 's|#HostKey /etc/ssh/|HostKey /etc/ssh/keys/|'
 
 RUN apk del sed
-RUN mkdir /srv/data /etc/ssh/keys
+RUN mkdir /srv/bin /srv/data /etc/ssh/keys /root/git-shell-commands
 
 WORKDIR /srv
+ENV PATH "$PATH:/srv/bin"
+
+RUN ln -s /usr/bin/git-shell bin/manage
 
 COPY entrypoint.sh .
+COPY manage /root/git-shell-commands
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
