@@ -2,5 +2,7 @@
 
 cat << EOF
 Available commands:
-  help: show all available commands
+  help:   show all available commands
+  add:    add a new user
+  remove: remove a user
 EOF

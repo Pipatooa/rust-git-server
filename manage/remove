@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+
+if [ $# -ge 1 ]
+then
+  if ! id "$1" > /dev/null 2>&1
+  then
+    echo "User does not exist"
+    exit 1
+  fi
+  name=$1
+else
+  while
+    read -p "Username: " name
+    [ -z "$name" ] || ! id "$name" > /dev/null 2>&1
+  do [ -n "$name" ] && echo "User does not exist"; done
+fi
+
+while
+  read -p "Remove home? [y/n]: " rhome
+  [ "$rhome" != "y" ] && [ "$rhome" != "Y" ] && [ "$rhome" != "n" ] && [ "$rhome" != "N" ]
+do true; done
+
+if [ "$rhome" = "y" ] && [ "$rhome" = "Y" ]
+then
+  deluser --remove-home "$name" || exit $?
+else
+  deluser "$name" || exit $?
+fi

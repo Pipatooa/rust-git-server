@@ -11,4 +11,10 @@ while read -r file; do
   fi
 done
 
+for f in passwd group shadow
+do
+  cp -nv "/etc/$f" "/srv/users/$f"
+  ln -sf "/srv/users/$f" "/etc/$f"
+done
+
 exec "$@"
