@@ -8,6 +8,8 @@ fi
 
 FILTERED="$(grep "^$1" repos)"
 DST=$(echo "$2" | sed -e 's|/$||')
+echo "$DST"
+
 COUNT=$(echo "$FILTERED" | wc -l)
 
 for src in $FILTERED
@@ -27,7 +29,12 @@ echo "Moving $COUNT repositories:"
 
 for src in $FILTERED
 do
-  REPO="$DST/$(basename -- "$src")"
+  if [ "$DST" = "." ]
+  then
+    REPO=$(basename -- "$src")
+  else
+    REPO="$DST/$(basename -- "$src")"
+  fi
   mkdir -p "$REPO"
   mv -v "$src" "$DST"
   sed -i repos -e "s|^$src$|$REPO|"
