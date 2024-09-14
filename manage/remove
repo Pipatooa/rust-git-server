@@ -20,9 +20,9 @@ while
   [ "$rhome" != "y" ] && [ "$rhome" != "Y" ] && [ "$rhome" != "n" ] && [ "$rhome" != "N" ]
 do true; done
 
-if [ "$rhome" = "y" ] && [ "$rhome" = "Y" ]
+if [ "$rhome" = "y" ] || [ "$rhome" = "Y" ]
 then
-  deluser --remove-home "$name" || exit $?
+  ERR=$(deluser --remove-home "$name" 2>&1) || { echo "$ERR"; exit $?; }
 else
-  deluser "$name" || exit $?
+  ERR=$(deluser "$name" 2>&1) || { echo "$ERR"; exit $?; }
 fi

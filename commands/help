@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+cat << EOF
+Available commands:
+  help:   show all available commands
+EOF

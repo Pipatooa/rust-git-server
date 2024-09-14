@@ -13,4 +13,7 @@ services:
     volumes:
       - ./data:/srv/data:Z
       - ./keys:/etc/ssh/keys:Z
+      - ./users:/srv/users:Z
 ```
+
+To manage the git server, use `docker exec <container> manage`.
