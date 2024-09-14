@@ -5,6 +5,8 @@ RUN apk add --no-cache openssh git
 RUN sed -i /etc/ssh/sshd_config \
     -e 's/#PermitRootLogin .\+/PermitRootLogin no/' \
     -e 's/#PasswordAuthentication .\+/PasswordAuthentication no/' \
+    -e 's/#AllowAgentForwarding .\+/AllowAgentForwarding no/' \
+    -e 's/Subsystem/#Subsystem/' \
     -e 's|#HostKey /etc/ssh/|HostKey /etc/ssh/keys/|' \
     && echo -n "" > /etc/motd
 
