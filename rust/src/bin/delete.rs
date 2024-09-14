@@ -40,22 +40,24 @@ fn main() {
         }
     }
 
-    let repo_file = OpenOptions::new()
-        .read(true).open("repos")
-        .expect("Failed to open repo file");
-    let repo_file_reader = BufReader::new(repo_file);
-    let repo_replacement = OpenOptions::new()
-        .write(true).create(true).open("tmp_repos")
-        .expect("Failed to create temporary repos file");
-    let mut repo_replacement_writer = BufWriter::new(repo_replacement);
+    {
+        let repo_file = OpenOptions::new()
+            .read(true).open("repos")
+            .expect("Failed to open repo file");
+        let repo_file_reader = BufReader::new(repo_file);
+        let repo_replacement = OpenOptions::new()
+            .write(true).create(true).open("tmp_repos")
+            .expect("Failed to create temporary repos file");
+        let mut repo_replacement_writer = BufWriter::new(repo_replacement);
 
-    let repo_path = args.path.to_str().unwrap();
+        let repo_path = args.path.to_str().unwrap();
 
-    for line in repo_file_reader.lines() {
-        let line = line.expect("Failed to read from repo file");
-        if !line.eq(repo_path) {
-            writeln!(repo_replacement_writer, "{}", line).expect("Failed to write to temporary \
-            repo file");
+        for line in repo_file_reader.lines() {
+            let line = line.expect("Failed to read from repo file");
+            if !line.eq(repo_path) {
+                writeln!(repo_replacement_writer, "{}", line).expect("Failed to write to temporary \
+                repo file");
+            }
         }
     }
 
