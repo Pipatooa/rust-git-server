@@ -3,6 +3,7 @@
 cat << EOF
 Available commands:
   help               : show all available commands
-  create [repo name] : create a new repository
+  create <repo name> : create a new repository
+  list   [filter]    : list all repositories
   keys               : edit authorized_keys
 EOF

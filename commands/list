@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+if [ $# -gt 1 ]
+then
+  echo "Usage: list [filter]"
+  exit 1
+fi
+
+TOTAL=$(sort repos)
+
+if [ $# -eq 0 ]
+then
+  OUT=$TOTAL
+else
+  OUT=$(grep "$1" repos | sort)
+fi
+
+TOTAL_COUNT=$(echo "$TOTAL" | wc -l)
+COUNT=$(echo "$OUT" | wc -l)
+
+cat << EOF
+$OUT
+
+Showing $COUNT of $TOTAL_COUNT total repositories.
+EOF

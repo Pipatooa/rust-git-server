@@ -27,5 +27,6 @@ fi
 
 mkdir -p "$REPO.git"
 git init -q --bare "$REPO.git" || exit $?
+echo "$REPO.git" >> repos
 
 echo "Repo created at ~/$REPO.git"
