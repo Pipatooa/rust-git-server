@@ -4,7 +4,7 @@ RUN apk add --no-cache openssh git sed
 
 RUN sed -i /etc/ssh/sshd_config \
     -e 's/#PermitRootLogin .\+/PermitRootLogin no/' \
-    -e 's/#PasswordAuthentication \.+/PasswordAuthentication no/' \
+    -e 's/#PasswordAuthentication .\+/PasswordAuthentication no/' \
     -e 's|#HostKey /etc/ssh/|HostKey /etc/ssh/keys/|'
 
 RUN apk del sed
