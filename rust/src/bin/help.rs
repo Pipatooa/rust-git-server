@@ -48,8 +48,11 @@ Available commands:
     let result = Command::new(path)
         .arg("--help")
         .spawn();
-    if result.is_err() {
-        eprintln!("Failed to get help for '{}'", command);
-        process::exit(1);
-    }
+    match result {
+        Ok(mut child)=> child.wait().unwrap(),
+        Err(_) => {
+            eprintln!("Failed to get help for '{}'", command);
+            process::exit(1);
+        }
+    };
 }
