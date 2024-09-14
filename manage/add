@@ -16,3 +16,9 @@ else
 fi
 
 adduser "$name" -Dh "/srv/users/$name" -s /usr/bin/git-shell || exit $?
+echo "$name:*" | chpasswd || exit $?
+
+cat << EOF
+Added user $name
+Use 'keys $name' to add the user's public SSH keys
+EOF

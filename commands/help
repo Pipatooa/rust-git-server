@@ -3,4 +3,5 @@
 cat << EOF
 Available commands:
   help:   show all available commands
+  keys:   edit authorized_keys
 EOF

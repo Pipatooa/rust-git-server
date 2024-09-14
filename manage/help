@@ -2,7 +2,8 @@
 
 cat << EOF
 Available commands:
-  help:   show all available commands
-  add:    add a new user
-  remove: remove a user
+  help               : show all available commands
+  add     [username] : add a new user
+  remove  [username] : remove a user
+  keys    [username] : edit the authorized_keys for a user
 EOF
