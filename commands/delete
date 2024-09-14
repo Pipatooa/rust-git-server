@@ -26,6 +26,7 @@ then
 fi
 
 rm -r "$REPO"
-sed -i repos -e "|^$REPO$|d"
+grep -v "$REPO" repos > new_repos
+mv new_repos repos
 
 echo "Repo at ~/$REPO deleted"

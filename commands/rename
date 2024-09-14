@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+
+if [ $# -ne 2 ]
+then
+  echo "Usage: rename <old name> <new name>"
+  exit 1
+fi
+
+OLD_REPO="$(echo "$1" | sed -e 's/\.git$//').git"
+
+case "$OLD_REPO" in
+  *.*.git )
+    echo "Old repo name cannot contain periods"
+    exit 1
+    ;;
+  */*/*/*/*/*.git )
+    echo "Old repo cannot be nested more than 4 times"
+    exit 1
+    ;;
+esac
+
+NEW_REPO="$(echo "$2" | sed -e 's/\.git$//').git"
+
+case "$NEW_REPO" in
+  *.*.git )
+    echo "Old repo name cannot contain periods"
+    exit 1
+    ;;
+  */*/*/*/*/*.git )
+    echo "Old repo cannot be nested more than 4 times"
+    exit 1
+    ;;
+esac
+
+if [ ! -d "$OLD_REPO" ]
+then
+  echo "Repo does not exist"
+fi
+
+if [ -d "$NEW_REPO" ]
+then
+  echo "New repo name already exists"
+  exit 1
+fi
+
+mkdir -p "$(dirname "$NEW_REPO")"
+mv "$OLD_REPO" "$NEW_REPO"
+
+(grep -v "$OLD_REPO" repos; echo "$NEW_REPO") > new_repos
+mv new_repos repos
+
+echo "Renamed ~/$OLD_REPO to ~/$NEW_REPO"
