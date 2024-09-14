@@ -18,6 +18,17 @@ fi
 TOTAL_COUNT=$(echo "$TOTAL" | wc -l)
 COUNT=$(echo "$OUT" | wc -l)
 
+if [ -z "$OUT" ]
+then
+  if [ -z "$TOTAL" ]
+  then
+    echo "You have no repositories."
+  else
+    echo "No results from $TOTAL_COUNT total repositories."
+  fi
+  exit 0
+fi
+
 cat << EOF
 $OUT
 
