@@ -1,6 +1,16 @@
 FROM rust:alpine AS builder
+RUN apk add --no-cache build-base
+
 WORKDIR /srv
-COPY rust .
+COPY rust/Cargo.toml .
+COPY rust/Cargo.lock .
+
+RUN mkdir -p src/bin && \
+    echo "fn main() {}" > src/bin/dummy.rs && \
+    cargo install --path . && \
+    rm src/bin/dummy.rs
+
+COPY rust/src src
 RUN cargo install --path . --root out
 
 
