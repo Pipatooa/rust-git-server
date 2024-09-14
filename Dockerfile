@@ -1,5 +1,11 @@
-FROM alpine:latest
+FROM rust:alpine AS builder
+WORKDIR /srv
+COPY rust .
+RUN cargo install --path . --root out
 
+
+
+FROM alpine:latest
 RUN apk add --no-cache openssh git
 
 RUN sed -i /etc/ssh/sshd_config \
@@ -31,6 +37,7 @@ RUN ln -s /usr/bin/git-shell bin/manage
 COPY entrypoint.sh .
 COPY manage /root/git-shell-commands
 COPY commands /srv/commands
+COPY --from=builder /srv/out/bin /srv/commands
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
