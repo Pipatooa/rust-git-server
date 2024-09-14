@@ -1,5 +1,5 @@
-data
-keys
-users
+data/
+keys/
+users/
 
 docker-compose.yml

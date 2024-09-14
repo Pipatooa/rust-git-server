@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+
+if [ $# -ge 1 ]
+then
+  if ! id "$1" > /dev/null 2>&1
+  then
+    echo "User does not exist"
+    exit 1
+  fi
+  name=$1
+else
+  while
+    read -p "Username: " name
+    [ -z "$name" ] || ! id "$name" > /dev/null 2>&1
+  do [ -n "$name" ] && echo "User does not exist"; done
+fi
+
+vi "/srv/users/$name/.ssh/authorized_keys"
