@@ -49,7 +49,7 @@ Available commands:
         .arg("--help")
         .spawn();
     match result {
-        Ok(mut child)=> child.wait().unwrap(),
+        Ok(mut child)=> child.wait().ok(),
         Err(_) => {
             eprintln!("Failed to get help for '{}'", command);
             process::exit(1);
