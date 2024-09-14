@@ -1,5 +1,6 @@
-use std::io::{stdout, Write};
 use clap::Parser;
+use std::fs;
+use std::io::{stdout, Write};
 
 /// List all repositories matching any filters
 #[derive(Parser)]
@@ -24,11 +25,7 @@ fn match_repo(repo_name: &str, args: &Cli) -> bool {
 fn main() {
     let args = Cli::parse();
 
-    let repo_file = std::path::Path::new("repos");
-    let repo_list = match std::fs::read_to_string(repo_file) {
-        Ok(content) => content,
-        Err(_) => panic!("Failed to open repo file")
-    };
+    let repo_list = fs::read_to_string("repos").expect("Failed to open repo file");
 
     let mut count: u32 = 0;
     let mut total_count: u32 = 0;
