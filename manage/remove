@@ -15,14 +15,4 @@ else
   do [ -n "$name" ] && echo "User does not exist"; done
 fi
 
-while
-  read -p "Remove home? [y/n]: " rhome
-  [ "$rhome" != "y" ] && [ "$rhome" != "Y" ] && [ "$rhome" != "n" ] && [ "$rhome" != "N" ]
-do true; done
-
-if [ "$rhome" = "y" ] || [ "$rhome" = "Y" ]
-then
-  ERR=$(deluser --remove-home "$name" 2>&1) || { echo "$ERR"; exit $?; }
-else
-  ERR=$(deluser "$name" 2>&1) || { echo "$ERR"; exit $?; }
-fi
+ERR=$(deluser --remove-home "$name" 2>&1) || { echo "$ERR"; exit $?; }
