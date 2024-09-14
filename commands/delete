@@ -2,7 +2,7 @@
 
 if [ $# -ne 1 ]
 then
-  echo "Usage: create <repo name>"
+  echo "Usage: delete <repo name>"
   exit 1
 fi
 
@@ -19,14 +19,13 @@ case "$REPO" in
     ;;
 esac
 
-if [ -d "$REPO" ]
+if [ ! -d "$REPO" ]
 then
-  echo "Repo already exists"
+  echo "Repo does not exist"
   exit 1
 fi
 
-mkdir -p "$REPO"
-git init -q --bare "$REPO" || exit $?
-echo "$REPO" >> repos
+rm -r "$REPO"
+sed -i repos -e "|^$REPO$|d"
 
-echo "Repo created at ~/$REPO"
+echo "Repo at ~/$REPO deleted"
