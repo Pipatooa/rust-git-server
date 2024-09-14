@@ -2,8 +2,10 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 
 pub fn parse_path(path: &str) -> Result<PathBuf, String> {
-    if path.len() > 256 {
-        return Err(String::from("Path cannot exceed 256 characters"));
+    match path.len() {
+        0 => return Err(String::from("Path cannot be empty")),
+        257.. => return Err(String::from("Path cannot exceed 256 characters")),
+        _ => {}
     }
 
     let parsed = Path::new(path).to_owned();
