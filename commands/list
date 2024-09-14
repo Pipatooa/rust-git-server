@@ -12,7 +12,7 @@ if [ $# -eq 0 ]
 then
   OUT=$TOTAL
 else
-  OUT=$(grep "$1" repos | sort)
+  OUT=$(grep "^$1" repos | sort)
 fi
 
 TOTAL_COUNT=$(echo "$TOTAL" | wc -l)
