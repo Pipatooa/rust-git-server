@@ -5,5 +5,6 @@ Available commands:
   help               : show all available commands
   add     [username] : add a new user
   remove  [username] : remove a user
+  list               : list all users
   keys    [username] : edit the authorized_keys for a user
 EOF

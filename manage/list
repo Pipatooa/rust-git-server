@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+for dir in /srv/users/*/
+do
+  echo "$dir" | sed -e 's|/srv/users/||' | sed -e 's|/||'
+done
