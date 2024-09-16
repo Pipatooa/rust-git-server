@@ -146,6 +146,18 @@ where P: FnMut(&Path, FileType) -> (bool, bool) {
 impl<P> iter::FusedIterator for FilterRepos<IntoIter, P>
 where P: FnMut(&Path, FileType) -> (bool, bool) {}
 
+pub fn parse_command(command: &str) -> Result<String, String> {
+    if command.is_empty() {
+        return Err(String::from("Command cannot be empty"));
+    }
+
+    let re = Regex::new("^[a-z]+$").unwrap();
+    if !re.is_match(&command) {
+        return Err(String::from("Invalid command"));
+    }
+    Ok(command.to_string())
+}
+
 pub fn parse_repo_path(path: &str) -> Result<PathBuf, String> {
     match parse_repo_path_or_folder(path) {
         Err(e) => Err(e),

@@ -26,29 +26,29 @@ RUN sed -i /etc/ssh/sshd_config \
     -e 's|#HostKey /etc/ssh/|HostKey /etc/ssh/keys/|' \
     && echo -n "" > /etc/motd
 
-RUN mkdir /srv/bin /srv/commands /srv/repos /etc/ssh/keys /root/git-shell-commands
+WORKDIR /srv
+RUN mkdir bin commands repos /etc/ssh/keys /root/git-shell-commands
 
 RUN mkdir /etc/skel /etc/skel/.ssh  \
     && touch /etc/skel/.ssh/authorized_keys  \
     && chmod 700 /etc/skel/.ssh  \
     && chmod 644 /etc/skel/.ssh/authorized_keys \
-    && ln -s /srv/commands /etc/skel/git-shell-commands
+    && ln -s commands /etc/skel/git-shell-commands
 
-RUN for alias in h;             do ln -s /srv/commands/help   /srv/commands/$alias; done && \
-    for alias in init add;      do ln -s /srv/commands/create /srv/commands/$alias; done && \
-    for alias in rm remove del; do ln -s /srv/commands/delete /srv/commands/$alias; done && \
-    for alias in mv;            do ln -s /srv/commands/move   /srv/commands/$alias; done && \
-    for alias in ls l dir;      do ln -s /srv/commands/list   /srv/commands/$alias; done
+RUN for alias in h;             do ln -s help    commands/$alias; done && \
+    for alias in mk init add;   do ln -s create  commands/$alias; done && \
+    for alias in rm remove del; do ln -s delete  commands/$alias; done && \
+    for alias in mv rename;     do ln -s move    commands/$alias; done && \
+    for alias in ls l dir find; do ln -s list    commands/$alias; done && \
+    for alias in a alias;       do ln -s aliases commands/$alias; done
 
-WORKDIR /srv
 ENV PATH "$PATH:/srv/bin"
 
 RUN ln -s /usr/bin/git-shell bin/manage
 
 COPY entrypoint.sh .
 COPY manage /root/git-shell-commands
-COPY commands /srv/commands
-COPY --from=builder /srv/out/bin /srv/commands
+COPY --from=builder /srv/out/bin commands
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

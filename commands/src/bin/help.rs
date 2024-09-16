@@ -1,8 +1,8 @@
 use clap::Parser;
-use regex::Regex;
 use std::path::Path;
 use std::process;
 use std::process::Command;
+use commands::parse_command;
 
 /// List all commands or get help for a specific command
 #[derive(Parser)]
@@ -13,26 +13,20 @@ struct Cli {
     command: Option<String>
 }
 
-fn parse_command(command: &str) -> Result<String, String> {
-    let re = Regex::new("^[a-z]+$").unwrap();
-    if !re.is_match(&command) {
-        return Err(String::from("Invalid command"));
-    }
-    Ok(command.to_string())
-}
-
 fn main() {
     let args = Cli::parse();
 
     if args.command.is_none() {
         println!(" \
 Available commands:
-  help   : list all commands or get help for a specific command
-  create : create a new repository
-  delete : delete an existing repository
-  move   : rename a single or move multiple repositories
-  list   : list all repositories matching any filters
-  keys   : edit authorized_keys"
+  help    : list all commands or get help for a specific command
+  aliases : list all aliases for a command
+
+  create  : create a new repository
+  delete  : delete an existing repository
+  move    : rename a single or move multiple repositories
+  list    : list all repositories matching any filters
+  keys    : edit authorized_keys"
         );
         return;
     }
