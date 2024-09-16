@@ -1,6 +1,6 @@
-# Docker Local Git Server
+# Rust Git Server
 
-A simple local git server for Docker
+A simple local Git server for Docker powered by Rust
 
 ### Example `docker-compose.yml`:
 ```yml
