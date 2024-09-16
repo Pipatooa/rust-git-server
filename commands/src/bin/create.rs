@@ -14,7 +14,7 @@ use std::{fs, process};
 struct Cli {
     /// Paths to repositories
     #[arg(required = true, num_args = 1.., value_parser = clap::builder::ValueParser::new(parse_repo_path))]
-    path: Vec<PathBuf>
+    path: Vec<PathBuf>,
 }
 
 fn main() {
@@ -26,7 +26,13 @@ fn main() {
     if existing.len() > 0 {
         match existing.len() {
             1 => eprintln!("Repo already exists at '{}'", existing[0].display()),
-            _ => eprintln!("Repos already exist at: {}", existing.iter().map(|p| format!("'{}'", p.display())).join(", "))
+            _ => eprintln!(
+                "Repos already exist at: {}",
+                existing
+                    .iter()
+                    .map(|p| format!("'{}'", p.display()))
+                    .join(", ")
+            ),
         }
         process::exit(1);
     }
@@ -41,10 +47,7 @@ fn main() {
         }
 
         Command::new("git")
-            .args([
-                "init",
-                "--bare",
-            ])
+            .args(["init", "--bare"])
             .arg(&git_dir)
             .output()
             .expect("Failed to create repo");

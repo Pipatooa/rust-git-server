@@ -1,5 +1,8 @@
 use clap::Parser;
-use commands::{clean_empty_parent_folders, filter_repos, get_repo_home, make_glob_set, parse_repo_glob, represents_repo};
+use commands::{
+    clean_empty_parent_folders, filter_repos, get_repo_home, make_glob_set, parse_repo_glob,
+    represents_repo,
+};
 use globset::Glob;
 use std::io::Write;
 use std::{fs, io};
@@ -31,7 +34,8 @@ fn main() {
                 filter_repos(Some(path), false, |_| true).collect::<Vec<_>>()
             }
         })
-        .flatten().collect::<Vec<_>>();
+        .flatten()
+        .collect::<Vec<_>>();
 
     if paths.is_empty() {
         eprintln!("No matching repositories found");
@@ -57,9 +61,9 @@ fn main() {
             stdin.read_line(input).expect("Could not read input");
 
             match input.trim() {
-                "y" => {},
-                "Y" => {},
-                _ => continue
+                "y" => {}
+                "Y" => {}
+                _ => continue,
             }
         }
 
@@ -76,6 +80,6 @@ fn main() {
     }
     match deleted {
         1 => println!("Deleted 1 repository"),
-        _ => println!("Deleted {} repositories", deleted)
+        _ => println!("Deleted {} repositories", deleted),
     }
 }

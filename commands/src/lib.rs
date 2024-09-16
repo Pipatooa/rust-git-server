@@ -20,7 +20,11 @@ pub fn clean_empty_parent_folders(path: &Path, stop: Option<&Path>) {
         if !current.exists() || stop.is_some_and(|s| current.eq(s)) {
             break;
         }
-        if fs::read_dir(current).expect("Failed to read directory contents").next().is_none() {
+        if fs::read_dir(current)
+            .expect("Failed to read directory contents")
+            .next()
+            .is_none()
+        {
             fs::remove_dir(current).expect("Failed to remove empty parent")
         } else {
             break;
@@ -57,12 +61,22 @@ pub fn make_glob_set<'a>(globs: impl Iterator<Item = &'a Glob>) -> GlobSet {
     builder.build().unwrap()
 }
 
-pub fn filter_repos<F>(root: Option<PathBuf>, match_folders: bool, mut filter: F) -> impl Iterator<Item = PathBuf>
-where F: FnMut(&Path) -> bool {
-    FilterRepos::new(root, match_folders, move |path: &Path, file_type: FileType| {
-        let matched = filter(path);
-        (matched, matched && match_folders && file_type.is_dir())
-    })
+pub fn filter_repos<F>(
+    root: Option<PathBuf>,
+    match_folders: bool,
+    mut filter: F,
+) -> impl Iterator<Item = PathBuf>
+where
+    F: FnMut(&Path) -> bool,
+{
+    FilterRepos::new(
+        root,
+        match_folders,
+        move |path: &Path, file_type: FileType| {
+            let matched = filter(path);
+            (matched, matched && match_folders && file_type.is_dir())
+        },
+    )
 }
 
 #[derive(Debug)]
@@ -70,23 +84,36 @@ pub struct FilterRepos<I, P> {
     it: I,
     root: Option<PathBuf>,
     match_folders: bool,
-    predicate: P
+    predicate: P,
 }
 
 impl<P> FilterRepos<IntoIter, P>
-where P: FnMut(&Path, FileType) -> (bool, bool) {
-    fn new(root: Option<PathBuf>, match_folders: bool, predicate: P) -> impl Iterator<Item=PathBuf> + Sized {
+where
+    P: FnMut(&Path, FileType) -> (bool, bool),
+{
+    fn new(
+        root: Option<PathBuf>,
+        match_folders: bool,
+        predicate: P,
+    ) -> impl Iterator<Item = PathBuf> + Sized {
         let it_root = match &root {
             Some(root) => root,
-            None => &PathBuf::from(".")
+            None => &PathBuf::from("."),
         };
         let it = WalkDir::new(it_root).into_iter();
-        FilterRepos { it, root, match_folders, predicate }
+        FilterRepos {
+            it,
+            root,
+            match_folders,
+            predicate,
+        }
     }
 }
 
 impl<P> Iterator for FilterRepos<IntoIter, P>
-where P: FnMut(&Path, FileType) -> (bool, bool) {
+where
+    P: FnMut(&Path, FileType) -> (bool, bool),
+{
     type Item = PathBuf;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -108,22 +135,26 @@ where P: FnMut(&Path, FileType) -> (bool, bool) {
                     continue;
                 }
                 match base_folder.unwrap().as_os_str().to_str().unwrap() {
-                    ".ssh"               => continue,
+                    ".ssh" => continue,
                     "git-shell-commands" => continue,
-                    _ => ()
+                    _ => (),
                 }
             }
 
             let file_type = entry.file_type();
-            match (self.match_folders, file_type.is_symlink(), file_type.is_dir()) {
+            match (
+                self.match_folders,
+                file_type.is_symlink(),
+                file_type.is_dir(),
+            ) {
                 (_, true, _) => (),
                 (true, _, true) => (),
-                _               => continue
+                _ => continue,
             }
 
             let path = match &self.root.is_some() {
-                true  => entry.path(),
-                false => entry.path().strip_prefix(".").unwrap()
+                true => entry.path(),
+                false => entry.path().strip_prefix(".").unwrap(),
             };
 
             let (matches, skip_dir) = (self.predicate)(&path, file_type);
@@ -137,8 +168,10 @@ where P: FnMut(&Path, FileType) -> (bool, bool) {
     }
 }
 
-impl<P> iter::FusedIterator for FilterRepos<IntoIter, P>
-where P: FnMut(&Path, FileType) -> (bool, bool) {}
+impl<P> iter::FusedIterator for FilterRepos<IntoIter, P> where
+    P: FnMut(&Path, FileType) -> (bool, bool)
+{
+}
 
 pub fn parse_command(command: &str) -> Result<String, String> {
     if command.is_empty() {
@@ -155,7 +188,7 @@ pub fn parse_command(command: &str) -> Result<String, String> {
 pub fn parse_repo_path(path: &str) -> Result<PathBuf, String> {
     match parse_repo_path_or_folder(path) {
         Err(e) => Err(e),
-        Ok(parsed) => enforce_git_suffix(parsed)
+        Ok(parsed) => enforce_git_suffix(parsed),
     }
 }
 
@@ -163,11 +196,11 @@ pub fn parse_repo_path_or_folder(path: &str) -> Result<PathBuf, String> {
     match path.len() {
         0 => return Err(String::from("Path cannot be empty")),
         257.. => return Err(String::from("Path cannot exceed 256 characters")),
-        _ => ()
+        _ => (),
     }
 
     if path == "." {
-        return Ok(PathBuf::new())
+        return Ok(PathBuf::new());
     }
 
     let parsed = Path::new(path).to_owned();
@@ -183,8 +216,10 @@ pub fn parse_repo_path_or_folder(path: &str) -> Result<PathBuf, String> {
 
     let re = Regex::new("^(?:[A-Za-z0-9_\\-]+/)*[A-Za-z0-9_\\-]+(?:\\.git|/)?$").unwrap();
     if !re.is_match(path) {
-        return Err(String::from("Repository and folder names can only contain alphanumeric \
-    characters, hyphens, and underscores"));
+        return Err(String::from(
+            "Repository and folder names can only contain alphanumeric \
+    characters, hyphens, and underscores",
+        ));
     }
     if path.starts_with("git-shell-commands/") {
         return Err(String::from("Folder name disallowed"));
@@ -197,7 +232,7 @@ pub fn parse_repo_glob(glob: &str) -> Result<Glob, String> {
     match glob.len() {
         0 => return Err(String::from("Glob cannot be empty")),
         65.. => return Err(String::from("Glob cannot exceed 64 characters")),
-        _ => ()
+        _ => (),
     }
 
     let path = Path::new(glob);
@@ -223,11 +258,9 @@ pub fn parse_repo_glob(glob: &str) -> Result<Glob, String> {
         s.as_str()
     };
 
-    let parsed = GlobBuilder::new(glob)
-        .literal_separator(true)
-        .build();
+    let parsed = GlobBuilder::new(glob).literal_separator(true).build();
     match parsed {
         Ok(glob) => Ok(glob),
-        Err(e) => Err(e.to_string())
+        Err(e) => Err(e.to_string()),
     }
 }

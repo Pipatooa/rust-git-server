@@ -20,24 +20,30 @@ fn main() {
     let base_command = if command.is_symlink() {
         command.read_link().unwrap()
     } else if command.is_file() {
-        command.strip_prefix("git-shell-commands").unwrap().to_path_buf()
+        command
+            .strip_prefix("git-shell-commands")
+            .unwrap()
+            .to_path_buf()
     } else {
         eprintln!("Command not found");
         std::process::exit(1);
     };
 
-    let aliases = command_dir.read_dir().expect("Could not read commands")
+    let aliases = command_dir
+        .read_dir()
+        .expect("Could not read commands")
         .filter_map(Result::ok)
         .filter_map(|entry| {
             if entry.file_type().unwrap().is_symlink() {
                 let path = entry.path();
                 let dst = path.read_link().unwrap();
                 if dst.eq(&base_command) {
-                    return Some(path.file_name().unwrap().to_str().unwrap().to_string())
+                    return Some(path.file_name().unwrap().to_str().unwrap().to_string());
                 }
             }
             None
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     let base_command_name = base_command.file_name().unwrap().to_str().unwrap();
     println!("Aliases for command '{}':", base_command_name);

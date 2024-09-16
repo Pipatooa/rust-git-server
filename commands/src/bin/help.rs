@@ -10,14 +10,15 @@ use std::process::Command;
 struct Cli {
     /// Command to get help for
     #[arg(value_parser = clap::builder::ValueParser::new(parse_command))]
-    command: Option<String>
+    command: Option<String>,
 }
 
 fn main() {
     let args = Cli::parse();
 
     if args.command.is_none() {
-        println!(" \
+        println!(
+            " \
 Available commands:
   help    : list all commands or get help for a specific command
   aliases : list all aliases for a command
@@ -37,11 +38,9 @@ Available commands:
         process::exit(1);
     }
 
-    let result = Command::new(path)
-        .arg("--help")
-        .spawn();
+    let result = Command::new(path).arg("--help").spawn();
     match result {
-        Ok(mut child)=> child.wait().ok(),
+        Ok(mut child) => child.wait().ok(),
         Err(_) => {
             eprintln!("Failed to get help for '{}'", command);
             process::exit(1);
