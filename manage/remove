@@ -16,3 +16,8 @@ else
 fi
 
 ERR=$(deluser --remove-home "$name" 2>&1) || { echo "$ERR"; exit $?; }
+
+cat << EOF
+Repos have not been removed. To remove run:
+rm -r /srv/repos/$name
+EOF

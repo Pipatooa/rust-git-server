@@ -33,7 +33,7 @@ RUN mkdir /etc/skel /etc/skel/.ssh  \
     && touch /etc/skel/.ssh/authorized_keys  \
     && chmod 700 /etc/skel/.ssh  \
     && chmod 644 /etc/skel/.ssh/authorized_keys \
-    && ln -s commands /etc/skel/git-shell-commands
+    && ln -s /srv/commands /etc/skel/git-shell-commands
 
 RUN for alias in h;             do ln -s help    commands/$alias; done && \
     for alias in mk init add;   do ln -s create  commands/$alias; done && \
