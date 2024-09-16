@@ -1,8 +1,8 @@
 use clap::Parser;
+use commands::parse_command;
 use std::path::Path;
 use std::process;
 use std::process::Command;
-use commands::parse_command;
 
 /// List all commands or get help for a specific command
 #[derive(Parser)]
@@ -22,11 +22,10 @@ Available commands:
   help    : list all commands or get help for a specific command
   aliases : list all aliases for a command
 
-  create  : create a new repository
-  delete  : delete an existing repository
+  create  : create new repositories
+  delete  : delete existing repositories
   move    : rename a single or move multiple repositories
-  list    : list all repositories matching any filters
-  keys    : edit authorized_keys"
+  list    : list all repositories matching any filters"
         );
         return;
     }

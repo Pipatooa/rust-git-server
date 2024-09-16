@@ -1,44 +1,53 @@
+use std::iter;
 use clap::Parser;
-use commands::filter_repos;
+use globset::Glob;
+use commands::{filter_repos, make_glob_set, parse_repo_glob};
 
 /// List all repositories matching any filters
 #[derive(Parser)]
 #[command(about)]
 struct Cli {
-    /// Filter to apply to results
-    filter: Option<String>,
+    /// Filters to apply to results
+    #[arg(num_args = 0.., value_parser = clap::builder::ValueParser::new(parse_repo_glob))]
+    filter: Option<Vec<Glob>>,
     #[arg(short, long, default_value_t = false, requires("filter"))]
     /// Invert filter
     invert: bool,
-}
-
-fn match_repo(repo_name: &str, args: &Cli) -> bool {
-    let filter = match args.filter {
-        Some(ref str) => str,
-        None => return !args.invert
-    };
-
-    repo_name.starts_with(filter) ^ args.invert
+    /// Only output number of matches
+    #[arg(short, long)]
+    count: bool
 }
 
 fn main() {
     let args = Cli::parse();
 
+    let glob_set = match args.filter {
+        Some(set) => make_glob_set(set.iter()),
+        None => make_glob_set(iter::empty())
+    };
+
     let mut count: u32 = 0;
     let mut total_count: u32 = 0;
 
-    for path in filter_repos(false, |_| true) {
+    for path in filter_repos(None, false, |_| true) {
         total_count += 1;
 
-        if match_repo(path.to_str().unwrap(), &args) {
+        if args.invert ^ (glob_set.is_empty() || glob_set.is_match(&path)) {
             count += 1;
-            println!("{}", path.display());
+            if !args.count {
+                println!("{}", path.display());
+            }
         }
     }
 
+    if args.count {
+        println!("{}", count);
+        return;
+    }
+
     match (count, total_count) {
-        (_, 0) => println!("You have no repositories."),
-        (0, _) => println!("No results match filter."),
-        _      => println!("Matched {} repositories out of {} total.", count, total_count)
+        (_, 0) => println!("You have no repositories"),
+        (0, _) => println!("Matched no repositories ({} total)", total_count),
+        _      => println!("Matched {}/{} repositories", count, total_count)
     }
 }

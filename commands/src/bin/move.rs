@@ -1,7 +1,7 @@
 use clap::Parser;
-use commands::parse_repo_path_or_folder;
-use commands::{can_represent_repo, clean_empty_parent_folders, enforce_git_suffix, filter_repos, get_repo_home, parse_repo_glob, represents_repo, t_filter_repos};
-use globset::{Glob, GlobSetBuilder};
+use commands::{can_represent_repo, clean_empty_parent_folders, enforce_git_suffix, filter_repos, get_repo_home, parse_repo_glob, represents_repo};
+use commands::{make_glob_set, parse_repo_path_or_folder};
+use globset::Glob;
 use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 /// Rename a single or move multiple repositories
 #[derive(Parser)]
-#[command(about)]
+#[command(about, arg_required_else_help = true)]
 struct Cli {
     /// Paths to repositories
     #[arg(num_args = 1.., value_parser = clap::builder::ValueParser::new(parse_repo_glob))]
@@ -28,13 +28,8 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    let mut glob_builder = GlobSetBuilder::new();
-    args.source.iter().for_each(|e| {
-        glob_builder.add(e.clone());
-    });
-    let matcher = glob_builder.build().unwrap();
-
-    let sources = filter_repos(true, |path| matcher.is_match(path))
+    let glob_set = make_glob_set(args.source.iter());
+    let sources = filter_repos(None, true, |path| glob_set.is_match(path))
         .collect::<Vec<_>>();
 
     if sources.is_empty() {
@@ -100,10 +95,10 @@ fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) {
     let moves = sources.iter().map(|path| {
         if represents_repo(path) {
             let name = path.file_name().unwrap().to_str().unwrap();
-            vec!((path.to_path_buf(), dst.join(name)))
+            vec![(path.to_path_buf(), dst.join(name))]
         } else {
             let path_parent = path.parent();
-            t_filter_repos(Some(path.to_owned()), false, |_| true)
+            filter_repos(Some(path.to_owned()), false, |_| true)
                 .map(|src| {
                     let dst = if let Some(parent) = path_parent {
                         let clone = src.clone();

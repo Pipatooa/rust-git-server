@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 /// List aliases for a command
 #[derive(Parser)]
-#[command(about)]
+#[command(about, arg_required_else_help = true)]
 struct Cli {
     /// Command
     #[arg(value_parser = clap::builder::ValueParser::new(parse_command))]

@@ -1,4 +1,4 @@
-use globset::{Glob, GlobBuilder};
+use globset::{Glob, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::Regex;
 use std::fs::FileType;
 use std::path::{Path, PathBuf};
@@ -49,15 +49,15 @@ pub fn enforce_git_suffix(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
-pub fn filter_repos<F>(match_folders: bool, mut filter: F) -> impl Iterator<Item = PathBuf>
-where F: FnMut(&Path) -> bool {
-    FilterRepos::new(None, match_folders, move |path: &Path, file_type: FileType| {
-        let matched = filter(path);
-        (matched, matched && match_folders && file_type.is_dir())
-    })
+pub fn make_glob_set<'a>(globs: impl Iterator<Item = &'a Glob>) -> GlobSet {
+    let mut builder = GlobSetBuilder::new();
+    for glob in globs {
+        builder.add(glob.clone());
+    }
+    builder.build().unwrap()
 }
 
-pub fn t_filter_repos<F>(root: Option<PathBuf>, match_folders: bool, mut filter: F) -> impl Iterator<Item = PathBuf>
+pub fn filter_repos<F>(root: Option<PathBuf>, match_folders: bool, mut filter: F) -> impl Iterator<Item = PathBuf>
 where F: FnMut(&Path) -> bool {
     FilterRepos::new(root, match_folders, move |path: &Path, file_type: FileType| {
         let matched = filter(path);
@@ -101,19 +101,13 @@ where P: FnMut(&Path, FileType) -> (bool, bool) {
                 }
             };
 
-            let components = entry.path().components();
-            let base_folder = components.skip(1).next();
-            match base_folder {
-                None => continue,
-                Some(component) => match component.as_os_str().to_str()? {
-                    ".ssh"               => continue,
-                    "git-shell-commands" => continue,
-                    _ => ()
-                }
-            };
-
             if self.root.is_none() {
-                match base_folder?.as_os_str().to_str()? {
+                let components = entry.path().components();
+                let base_folder = components.skip(1).next();
+                if base_folder.is_none() {
+                    continue;
+                }
+                match base_folder.unwrap().as_os_str().to_str().unwrap() {
                     ".ssh"               => continue,
                     "git-shell-commands" => continue,
                     _ => ()
