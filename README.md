@@ -11,8 +11,8 @@ services:
     ports:
       - "4022:22"
     volumes:
-      - ./data:/srv/data:Z
       - ./keys:/etc/ssh/keys:Z
+      - ./repos:/srv/repos:Z
       - ./users:/srv/users:Z
 ```
 

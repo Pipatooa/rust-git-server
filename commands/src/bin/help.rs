@@ -1,8 +1,8 @@
 use clap::Parser;
-use std::{process};
-use std::path::Path;
-use std::process::Command;
 use regex::Regex;
+use std::path::Path;
+use std::process;
+use std::process::Command;
 
 /// List all commands or get help for a specific command
 #[derive(Parser)]
@@ -30,8 +30,7 @@ Available commands:
   help   : list all commands or get help for a specific command
   create : create a new repository
   delete : delete an existing repository
-  rename : rename a single existing repository
-  move   : move all matching repositories into a folder
+  move   : rename a single or move multiple repositories
   list   : list all repositories matching any filters
   keys   : edit authorized_keys"
         );

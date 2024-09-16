@@ -1,6 +1,5 @@
 use clap::Parser;
-use std::fs;
-use std::io::{stdout, Write};
+use commands::filter_repos;
 
 /// List all repositories matching any filters
 #[derive(Parser)]
@@ -25,20 +24,17 @@ fn match_repo(repo_name: &str, args: &Cli) -> bool {
 fn main() {
     let args = Cli::parse();
 
-    let repo_list = fs::read_to_string("repos").expect("Failed to open repo file");
-
     let mut count: u32 = 0;
     let mut total_count: u32 = 0;
 
-    let mut lock = stdout().lock();
-    for repo_name in repo_list.lines() {
+    for path in filter_repos(false, |_| true) {
         total_count += 1;
-        if match_repo(repo_name, &args) {
+
+        if match_repo(path.to_str().unwrap(), &args) {
             count += 1;
-            println!("{}", repo_name);
+            println!("{}", path.display());
         }
     }
-    lock.flush().unwrap();
 
     match (count, total_count) {
         (_, 0) => println!("You have no repositories."),

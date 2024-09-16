@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-
-vi ".ssh/authorized_keys"
