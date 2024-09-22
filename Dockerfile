@@ -5,13 +5,15 @@ WORKDIR /srv
 COPY commands/Cargo.toml .
 COPY commands/Cargo.lock .
 
+ARG CARGO_FLAGS
+
 RUN mkdir -p src/bin && \
     echo "fn main() {}" > src/bin/dummy.rs && \
-    cargo install --path . && \
+    cargo install --path . $CARGO_FLAGS && \
     rm src/bin/dummy.rs
 
 COPY commands/src src
-RUN cargo install --path . --root out
+RUN cargo install --path . --root out $CARGO_FLAGS
 
 
 
@@ -49,6 +51,7 @@ RUN ln -s /usr/bin/git-shell bin/manage
 COPY entrypoint.sh .
 COPY manage /root/git-shell-commands
 COPY --from=builder /srv/out/bin commands
+RUN mv commands/shell bin
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
