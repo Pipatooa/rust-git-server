@@ -1,22 +1,9 @@
-use std::ffi::OsStr;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::{cursor, event, terminal, QueueableCommand};
 use std::io;
 use std::io::{stdout, Stdout, Write};
-use std::panic::UnwindSafe;
-use std::process::{Command, ExitStatus};
+use std::process::ExitStatus;
 use std::time::Duration;
-use crossterm::{cursor, event, terminal, QueueableCommand};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-
-pub fn invoke_command<I, S>(command: &str, args: I) -> io::Result<ExitStatus>
-where I: IntoIterator<Item=S>, S: AsRef<OsStr> {
-    let mut command = Command::new(command);
-    command.args(args);
-
-    match command.spawn() {
-        Ok(mut child) => child.wait(),
-        Err(e) => Err(e)
-    }
-}
 
 struct Shell {
     stdout: Stdout,
@@ -27,12 +14,16 @@ struct Shell {
 
     buffer: Vec<char>,
     cursor: usize,
+    last_width: u16,
+    prompt_to_cursor: u16,
 
-    update: bool
+    update: bool,
 }
 
 impl Shell {
     fn new() -> Shell {
+        let (width, _) = terminal::size().expect("Could not query terminal width");
+
         Shell {
             stdout: stdout(),
             prompt: String::from("> "),
@@ -42,101 +33,222 @@ impl Shell {
 
             buffer: Vec::new(),
             cursor: 0,
+            last_width: width,
+            prompt_to_cursor: 0,
 
             update: false,
         }
     }
 }
 
-impl UnwindSafe for Shell {}
-
 pub fn interactive_shell() {
     let mut shell = Shell::new();
     display_buffer(&mut shell).unwrap();
-    terminal::enable_raw_mode().ok();
+    terminal::enable_raw_mode().expect("Unable to set raw mode");
     event_loop(&mut shell).unwrap();
 }
 
-fn event_loop(shell: &mut Shell) -> Result<(), io::Error> {
+fn exit_interactive(status: i32) -> io::Result<()> {
+    terminal::disable_raw_mode()?;
+    std::process::exit(status);
+}
+
+fn event_loop(shell: &mut Shell) -> io::Result<()> {
+    let default_poll_duration = Duration::from_millis(100);
+    let mut poll_duration = default_poll_duration;
+
     loop {
-        if event::poll(Duration::from_millis(100))? {
+        if event::poll(poll_duration)? {
             while {
                 match event::read()? {
                     Event::Key(key) => handle_key_event(key, shell)?,
-                    _ => ()
+                    Event::Resize(_, _) => shell.update = true,
+                    _ => (),
                 }
                 event::poll(Duration::from_millis(0))?
             } {}
         }
 
+        poll_duration = default_poll_duration;
+
         if shell.update {
             display_buffer(shell)?;
+        }
+
+        match invoke_prompt(shell) {
+            Ok(Some(_)) => {
+                display_buffer(shell)?;
+                poll_duration = Duration::from_millis(0);
+            }
+            Err(e) => return Err(e),
+            _ => {}
         }
     }
 }
 
-fn display_buffer(shell: &mut Shell) -> Result<(), io::Error>{
-    shell.stdout.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
-    shell.stdout.queue(cursor::MoveToColumn(0))?;
-    print!("> {}", shell.buffer.iter().collect::<String>());
-    shell.stdout.queue(cursor::MoveToColumn((shell.cursor + 2) as u16))?;
+fn handle_key_event(key: KeyEvent, shell: &mut Shell) -> io::Result<()> {
+    match (key.modifiers, key.code) {
+        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(char)) => {
+            prompt_input(shell, char)
+        }
+        (KeyModifiers::CONTROL, KeyCode::Char('c')) => prompt_erase(shell),
+        (KeyModifiers::CONTROL, KeyCode::Char('d')) => exit_interactive(0)?,
+        (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
+            prompt_clear(shell, terminal::ClearType::All)?
+        }
+        (KeyModifiers::NONE, KeyCode::Left)      => prompt_shift_cursor(shell, -1),
+        (KeyModifiers::NONE, KeyCode::Right)     => prompt_shift_cursor(shell, 1),
+        (KeyModifiers::NONE, KeyCode::Backspace) => prompt_delete(shell, -1),
+        (KeyModifiers::NONE, KeyCode::Delete)    => prompt_delete(shell, 0),
+        (KeyModifiers::NONE, KeyCode::Enter)     => prompt_enter(shell),
+        (_, KeyCode::Home)                       => prompt_set_cursor(shell, 0),
+        (_, KeyCode::End)                        => prompt_set_cursor(shell, shell.buffer.len()),
+        _ => (),
+    }
+    Ok(())
+}
 
+fn invoke_prompt(shell: &mut Shell) -> io::Result<Option<ExitStatus>> {
+    match shell.history.get(shell.executed) {
+        None => Ok(None),
+        Some(buffer) => {
+            shell.executed += 1;
+            shell.stdout.queue(cursor::MoveToColumn(0))?;
+            println!();
+
+            let command = buffer.iter().collect::<String>();
+            let args = shlex::split(command.as_str()).expect("Failed to split command");
+
+            let command = &args[0];
+            let args = &args[1..];
+
+            match invoke_builtin(shell, command)? {
+                Some(status) => Ok(Some(status)),
+                None => {
+                    terminal::disable_raw_mode()?;
+                    let result = crate::invoke::invoke_command(command, args);
+                    terminal::enable_raw_mode()?;
+                    result
+                }
+            }
+        }
+    }
+}
+
+fn invoke_builtin(shell: &mut Shell, command: &str) -> io::Result<Option<ExitStatus>> {
+    match command {
+        "exit" => exit_interactive(0)?,
+        "clear" => prompt_clear(shell, terminal::ClearType::Purge)?,
+        _ => return Ok(None),
+    }
+    Ok(Some(ExitStatus::default()))
+}
+
+fn display_buffer(shell: &mut Shell) -> io::Result<()> {
+    let (width, _) = terminal::size()?;
+    let (_, row) = cursor::position()?;
+
+    let (buffer, cursor) = match shell.history.get(shell.executed) {
+        Some(buffer) => (buffer, buffer.len()),
+        None => (&shell.buffer, shell.cursor),
+    };
+
+    shell.stdout.queue(cursor::MoveTo(0, row - shell.prompt_to_cursor))?;
+    shell.stdout.queue(terminal::Clear(terminal::ClearType::FromCursorDown))?;
+    shell.stdout.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
+
+    let (formatted, cursor_col, cursor_row) = format_buffer(&buffer, cursor, width);
+    print!("{}", formatted);
+    shell.stdout.queue(cursor::MoveTo(cursor_col, row - shell.prompt_to_cursor + cursor_row))?;
     shell.stdout.flush()?;
+
+    shell.prompt_to_cursor = cursor_row;
+    shell.last_width = width;
     shell.update = false;
     Ok(())
 }
 
-fn handle_key_event(key: KeyEvent, shell: &mut Shell) -> Result<(), io::Error> {
-    match (key.modifiers, key.code) {
-        (KeyModifiers::CONTROL, KeyCode::Char('d')) => std::process::exit(0),
-        (_, KeyCode::Home) => { shell.cursor = 0; shell.update = true; }
-        (_, KeyCode::End) => { shell.cursor = shell.buffer.len(); shell.update = true; }
-        (KeyModifiers::NONE, KeyCode::Left)  => {
-            if shell.cursor > 0 {
-                shell.cursor -= 1;
-                shell.update = true;
-            }
-        },
-        (KeyModifiers::NONE, KeyCode::Right) => {
-            if shell.cursor < shell.buffer.len() {
-                shell.cursor += 1;
-                shell.update = true;
-            }
-        },
-        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(char)) => {
-            shell.buffer.insert(shell.cursor, char);
-            shell.cursor += 1;
-            shell.update = true;
-        },
-        (KeyModifiers::NONE, KeyCode::Backspace) => {
-            if shell.cursor > 0 {
-                shell.buffer.remove(shell.cursor - 1);
-                shell.cursor -= 1;
-                shell.update = true;
-            }
-        },
-        (KeyModifiers::NONE, KeyCode::Delete) => {
-            if shell.cursor < shell.buffer.len() {
-                shell.buffer.remove(shell.cursor);
-                shell.update = true;
-            }
-        },
-        (KeyModifiers::NONE, KeyCode::Enter) => {
-            if shell.buffer.last() == Some(&'\\') {
-                todo!("Multiline commands");
-            } else {
-                shell.history.push(shell.buffer.clone());
-                shell.buffer.clear();
-            }
+fn format_buffer(buffer: &Vec<char>, cursor: usize, width: u16) -> (String, u16, u16) {
+    const PROMPT: &str = "> ";
+    let (mut col, mut row) = (PROMPT.len() as u16, 0);
 
-            shell.cursor = 0;
-            shell.update = true;
+    let mut formatted = String::from(PROMPT);
+
+    for (i, char) in buffer.iter().enumerate() {
+        formatted.push(*char);
+        if i < cursor {
+            if col == width - 1 {
+                row += 1;
+                col = 0;
+            } else {
+                col += 1;
+            }
         }
-        _ => ()
     }
-    Ok(())
+
+    if cursor == buffer.len() {
+        formatted.push(' ');
+    }
+
+    (formatted, col, row)
 }
 
-fn invoke_prompt(_buffer: &Vec<char>) -> io::Result<ExitStatus> {
-    todo!()
+fn prompt_set_cursor(shell: &mut Shell, pos: usize) {
+    if pos != shell.cursor {
+        shell.cursor = pos;
+        shell.update = true;
+    }
+}
+
+fn prompt_shift_cursor(shell: &mut Shell, delta: isize) {
+    match shell.cursor.checked_add_signed(delta) {
+        Some(pos) if pos <= shell.buffer.len() => {
+            shell.cursor = pos;
+            shell.update = true;
+        }
+        _ => {}
+    }
+}
+
+fn prompt_input(shell: &mut Shell, char: char) {
+    shell.buffer.insert(shell.cursor, char);
+    shell.cursor += 1;
+    shell.update = true;
+}
+
+fn prompt_delete(shell: &mut Shell, delta: isize) {
+    match shell.cursor.checked_add_signed(delta) {
+        Some(pos) if pos < shell.buffer.len() => {
+            shell.buffer.remove(pos);
+            shell.cursor = pos;
+            shell.update = true;
+        }
+        _ => {}
+    }
+}
+
+fn prompt_erase(shell: &mut Shell) {
+    shell.buffer.clear();
+    shell.cursor = 0;
+    shell.update = true;
+}
+
+fn prompt_enter(shell: &mut Shell) {
+    if shell.buffer.last() == Some(&'\\') {
+        todo!("Multiline commands");
+    } else {
+        shell.history.push(shell.buffer.clone());
+        shell.buffer.clear();
+    }
+
+    shell.cursor = 0;
+    shell.update = true;
+}
+
+fn prompt_clear(shell: &mut Shell, clear_type: terminal::ClearType) -> io::Result<()> {
+    shell.stdout.queue(cursor::MoveTo(0, 0))?;
+    shell.stdout.queue(terminal::Clear(clear_type))?;
+    shell.prompt_to_cursor = 0;
+    shell.update = true;
+    Ok(())
 }

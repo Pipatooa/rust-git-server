@@ -15,7 +15,7 @@ else
   do [ -n "$name" ] && echo "User already exists"; done
 fi
 
-adduser "$name" -Dh "/srv/users/$name" -s /usr/bin/git-shell || exit $?
+adduser "$name" -Dh "/srv/users/$name" -s /srv/bin/shell || exit $?
 echo "$name:*" | chpasswd || exit $?
 
 mkdir "/srv/repos/$name"

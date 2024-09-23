@@ -1,8 +1,9 @@
-mod interactive;
 mod git;
+mod interactive;
+mod invoke;
 
-use clap::Parser;
 use clap::builder::ValueParser;
+use clap::Parser;
 
 /// Limited shell
 #[derive(Parser)]
@@ -43,11 +44,12 @@ fn main() {
         "git-receive-pack"   => git::git_receive_pack(args),
         "git-upload-pack"    => git::git_receive_pack(args),
         "git upload-archive" => git::git_upload_archive(args),
-        _                    => ()
+        _ => (),
     }
 
-    match interactive::invoke_command(command, args) {
-        Ok(status) => std::process::exit(status.code().unwrap()),
+    match invoke::invoke_command(command, args) {
+        Ok(Some(status)) => std::process::exit(status.code().unwrap()),
+        Ok(None) => std::process::exit(1),
         Err(e) => {
             eprintln!("{}", e);
             std::process::exit(1);

@@ -2,7 +2,6 @@ use clap::Parser;
 use commands::{get_repo_home, parse_repo_path};
 use itertools::Itertools;
 use std::collections::HashSet;
-use std::fmt::Debug;
 use std::os::unix;
 use std::path::PathBuf;
 use std::process::Command;
