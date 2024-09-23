@@ -1,6 +1,6 @@
 mod git;
 mod interactive;
-mod invoke;
+mod commands;
 
 use clap::builder::ValueParser;
 use clap::Parser;
@@ -33,23 +33,11 @@ fn main() {
     let args = shlex::split(command).expect("Failed to split command");
 
     if args.is_empty() {
-        eprintln!("No command specified");
         std::process::exit(1);
     }
 
-    let command = &args[0];
-    let args = &args[1..];
-
-    match command.as_str() {
-        "git-receive-pack"   => git::git_receive_pack(args),
-        "git-upload-pack"    => git::git_receive_pack(args),
-        "git upload-archive" => git::git_upload_archive(args),
-        _ => (),
-    }
-
-    match invoke::invoke_command(command, args) {
-        Ok(Some(status)) => std::process::exit(status.code().unwrap()),
-        Ok(None) => std::process::exit(1),
+    match commands::invoke_command(None, &args) {
+        Ok(exit_code) => std::process::exit(exit_code),
         Err(e) => {
             eprintln!("{}", e);
             std::process::exit(1);

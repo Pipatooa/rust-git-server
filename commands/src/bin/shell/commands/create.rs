@@ -5,10 +5,10 @@ use std::collections::HashSet;
 use std::os::unix;
 use std::path::PathBuf;
 use std::process::Command;
-use std::{fs, process};
+use std::{fs, io};
 
 /// Create new repositories
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(about, arg_required_else_help = true)]
 struct Cli {
     /// Paths to repositories
@@ -16,9 +16,15 @@ struct Cli {
     path: Vec<PathBuf>,
 }
 
-fn main() {
-    let args = Cli::parse();
+pub fn invoke(args: &Vec<String>) -> io::Result<i32> {
+    let result = Cli::try_parse_from(args);
+    match result {
+        Err(e) => { eprintln!("{}", e); Ok(e.exit_code()) },
+        Ok(args) => Ok(run(args)),
+    }
+}
 
+fn run(args: Cli) -> i32 {
     let paths = args.path.iter().collect::<HashSet<_>>();
     let existing = paths.iter().filter(|p| p.exists()).collect::<Vec<_>>();
 
@@ -33,7 +39,7 @@ fn main() {
                     .join(", ")
             ),
         }
-        process::exit(1);
+        return 1;
     }
 
     let git_home = get_repo_home();
@@ -57,4 +63,5 @@ fn main() {
     if paths.len() > 1 {
         println!("Created {} new repositories", paths.len());
     }
+    0
 }

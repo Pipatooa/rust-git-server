@@ -1,11 +1,13 @@
-pub fn git_receive_pack(args: &[String]) -> ! {
-    todo!("git-receive-pack {:?}", args)
+use std::io;
+
+pub fn git_receive_pack(_args: &Vec<String>) -> io::Result<i32> {
+    todo!("git-receive-pack")
 }
 
-pub fn git_upload_pack(args: &[String]) -> ! {
-    todo!("git-upload-pack {:?}", args)
+pub fn git_upload_pack(_args: &Vec<String>) -> io::Result<i32> {
+    todo!("git-upload-pack")
 }
 
-pub fn git_upload_archive(args: &[String]) -> ! {
-    todo!("git-upload-archive {:?}", args)
+pub fn git_upload_archive(_args: &Vec<String>) -> io::Result<i32> {
+    todo!("git-upload-archive")
 }

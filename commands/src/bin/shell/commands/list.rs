@@ -1,7 +1,7 @@
 use clap::Parser;
 use commands::{filter_repos, make_glob_set, parse_repo_glob};
 use globset::Glob;
-use std::iter;
+use std::{io, iter};
 
 /// List all repositories matching any filters
 #[derive(Parser)]
@@ -18,9 +18,15 @@ struct Cli {
     count: bool,
 }
 
-fn main() {
-    let args = Cli::parse();
+pub fn invoke(args: &Vec<String>) -> io::Result<i32> {
+    let result = Cli::try_parse_from(args);
+    match result {
+        Err(e) => { eprintln!("{}", e); Ok(e.exit_code()) },
+        Ok(args) => Ok(run(args)),
+    }
+}
 
+fn run(args: Cli) -> i32 {
     let glob_set = match args.filter {
         Some(set) => make_glob_set(set.iter()),
         None => make_glob_set(iter::empty()),
@@ -42,7 +48,7 @@ fn main() {
 
     if args.count {
         println!("{}", count);
-        return;
+        return 0;
     }
 
     match (count, total_count) {
@@ -50,4 +56,5 @@ fn main() {
         (0, _) => println!("Matched no repositories ({} total)", total_count),
         _ => println!("Matched {}/{} repositories", count, total_count),
     }
+    0
 }

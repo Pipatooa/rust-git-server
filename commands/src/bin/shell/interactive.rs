@@ -1,11 +1,11 @@
+use crate::commands::invoke_command;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{cursor, event, terminal, QueueableCommand};
 use std::io;
 use std::io::{stdout, Stdout, Write};
-use std::process::ExitStatus;
 use std::time::Duration;
 
-struct Shell {
+pub struct Shell {
     stdout: Stdout,
     prompt: String,
 
@@ -48,9 +48,17 @@ pub fn interactive_shell() {
     event_loop(&mut shell).unwrap();
 }
 
-fn exit_interactive(status: i32) -> io::Result<()> {
+pub fn exit_interactive(exit_code: i32) -> io::Result<i32> {
     terminal::disable_raw_mode()?;
-    std::process::exit(status);
+    std::process::exit(exit_code);
+}
+
+pub fn prompt_clear(shell: &mut Shell, clear_type: terminal::ClearType) -> io::Result<i32> {
+    shell.stdout.queue(cursor::MoveTo(0, 0))?;
+    shell.stdout.queue(terminal::Clear(clear_type))?;
+    shell.prompt_to_cursor = 0;
+    shell.update = true;
+    Ok(0)
 }
 
 fn event_loop(shell: &mut Shell) -> io::Result<()> {
@@ -92,9 +100,9 @@ fn handle_key_event(key: KeyEvent, shell: &mut Shell) -> io::Result<()> {
             prompt_input(shell, char)
         }
         (KeyModifiers::CONTROL, KeyCode::Char('c')) => prompt_erase(shell),
-        (KeyModifiers::CONTROL, KeyCode::Char('d')) => exit_interactive(0)?,
+        (KeyModifiers::CONTROL, KeyCode::Char('d')) => { exit_interactive(0)?; },
         (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
-            prompt_clear(shell, terminal::ClearType::All)?
+            prompt_clear(shell, terminal::ClearType::All)?;
         }
         (KeyModifiers::NONE, KeyCode::Left)      => prompt_shift_cursor(shell, -1),
         (KeyModifiers::NONE, KeyCode::Right)     => prompt_shift_cursor(shell, 1),
@@ -108,7 +116,7 @@ fn handle_key_event(key: KeyEvent, shell: &mut Shell) -> io::Result<()> {
     Ok(())
 }
 
-fn invoke_prompt(shell: &mut Shell) -> io::Result<Option<ExitStatus>> {
+fn invoke_prompt(shell: &mut Shell) -> io::Result<Option<i32>> {
     match shell.history.get(shell.executed) {
         None => Ok(None),
         Some(buffer) => {
@@ -118,30 +126,9 @@ fn invoke_prompt(shell: &mut Shell) -> io::Result<Option<ExitStatus>> {
 
             let command = buffer.iter().collect::<String>();
             let args = shlex::split(command.as_str()).expect("Failed to split command");
-
-            let command = &args[0];
-            let args = &args[1..];
-
-            match invoke_builtin(shell, command)? {
-                Some(status) => Ok(Some(status)),
-                None => {
-                    terminal::disable_raw_mode()?;
-                    let result = crate::invoke::invoke_command(command, args);
-                    terminal::enable_raw_mode()?;
-                    result
-                }
-            }
+            Ok(Some(invoke_command(Some(shell), &args)?))
         }
     }
-}
-
-fn invoke_builtin(shell: &mut Shell, command: &str) -> io::Result<Option<ExitStatus>> {
-    match command {
-        "exit" => exit_interactive(0)?,
-        "clear" => prompt_clear(shell, terminal::ClearType::Purge)?,
-        _ => return Ok(None),
-    }
-    Ok(Some(ExitStatus::default()))
 }
 
 fn display_buffer(shell: &mut Shell) -> io::Result<()> {
@@ -243,12 +230,4 @@ fn prompt_enter(shell: &mut Shell) {
 
     shell.cursor = 0;
     shell.update = true;
-}
-
-fn prompt_clear(shell: &mut Shell, clear_type: terminal::ClearType) -> io::Result<()> {
-    shell.stdout.queue(cursor::MoveTo(0, 0))?;
-    shell.stdout.queue(terminal::Clear(clear_type))?;
-    shell.prompt_to_cursor = 0;
-    shell.update = true;
-    Ok(())
 }

@@ -7,7 +7,7 @@ use commands::{make_glob_set, parse_repo_path_or_folder};
 use globset::Glob;
 use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::{fs, io};
 use std::os::unix;
 use std::path::PathBuf;
 
@@ -28,33 +28,40 @@ struct Cli {
     dry_run: bool,
 }
 
-fn main() {
-    let args = Cli::parse();
+pub fn invoke(args: &Vec<String>) -> io::Result<i32> {
+    let result = Cli::try_parse_from(args);
+    match result {
+        Err(e) => { eprintln!("{}", e); Ok(e.exit_code()) },
+        Ok(args) => Ok(run(args)),
+    }
+}
 
+fn run(args: Cli) -> i32 {
     let glob_set = make_glob_set(args.source.iter());
     let sources = filter_repos(None, true, |path| glob_set.is_match(path)).collect::<Vec<_>>();
 
     if sources.is_empty() {
         eprintln!("No matching repositories found");
-        std::process::exit(1);
+        return 1;
     }
 
-    let rename_only =
-        sources.len() == 1 && represents_repo(&sources[0]) && can_represent_repo(&args.destination);
+    let rename_only = sources.len() == 1
+        && represents_repo(&sources[0])
+        && can_represent_repo(&args.destination);
 
     if rename_only {
-        move_single(&sources[0], &args.destination, args.dry_run);
+        move_single(&sources[0], &args.destination, args.dry_run)
     } else {
-        move_multiple(&sources, &args.destination, args.dry_run);
+        move_multiple(&sources, &args.destination, args.dry_run)
     }
 }
 
-fn move_single(src: &PathBuf, dst: &PathBuf, dry_run: bool) {
+fn move_single(src: &PathBuf, dst: &PathBuf, dry_run: bool) -> i32 {
     let dst = enforce_git_suffix(dst.to_path_buf()).unwrap();
 
     if src.eq(&dst) {
         println!("Nothing to do");
-        return;
+        return 0;
     }
 
     if dst.exists() {
@@ -63,12 +70,12 @@ fn move_single(src: &PathBuf, dst: &PathBuf, dry_run: bool) {
             src.display(),
             dst.display()
         );
-        std::process::exit(1);
+        return 1;
     }
 
     println!("'{}' -> '{}'", src.display(), dst.display());
     if dry_run {
-        return;
+        return 0;
     }
 
     let repo_home = get_repo_home();
@@ -89,12 +96,13 @@ fn move_single(src: &PathBuf, dst: &PathBuf, dry_run: bool) {
     clean_empty_parent_folders(&src, None);
     clean_empty_parent_folders(&git_src, Some(&repo_home));
     println!("Repository renamed");
+    0
 }
 
-fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) {
+fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) -> i32 {
     if represents_repo(dst) {
         eprintln!("Destination is a repository, but multiple sources match");
-        std::process::exit(1);
+        return 1;
     }
 
     let moves = sources
@@ -185,12 +193,12 @@ fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) {
                 ))
                 .join("\n")
         );
-        std::process::exit(1);
+        return 1;
     }
 
     if moves.is_empty() {
         eprintln!("Nothing to do");
-        return;
+        return 0;
     }
 
     if dry_run {
@@ -198,7 +206,7 @@ fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) {
         for (src, dst) in moves {
             println!("'{}' -> '{}'", src.display(), dst.display());
         }
-        return;
+        return 0;
     }
 
     const TMP_DIR: &str = ".tmp";
@@ -263,4 +271,5 @@ fn move_multiple(sources: &Vec<PathBuf>, dst: &PathBuf, dry_run: bool) {
     }
 
     println!("Moved {} repositories", moves.len());
+    0
 }

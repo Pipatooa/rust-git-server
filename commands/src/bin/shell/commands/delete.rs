@@ -22,9 +22,15 @@ struct Cli {
     confirm: bool,
 }
 
-fn main() {
-    let args = Cli::parse();
+pub fn invoke(args: &Vec<String>) -> io::Result<i32> {
+    let result = Cli::try_parse_from(args);
+    match result {
+        Err(e) => { eprintln!("{}", e); Ok(e.exit_code()) },
+        Ok(args) => Ok(run(args)),
+    }
+}
 
+fn run(args: Cli) -> i32 {
     let glob_set = make_glob_set(args.path.iter());
     let paths = filter_repos(None, true, |path| glob_set.is_match(path))
         .map(|path| {
@@ -39,7 +45,7 @@ fn main() {
 
     if paths.is_empty() {
         eprintln!("No matching repositories found");
-        std::process::exit(1);
+        return 1;
     }
 
     if args.dry_run {
@@ -47,7 +53,7 @@ fn main() {
         for path in paths {
             println!("Delete '{}'", path.display());
         }
-        return;
+        return 0;
     }
 
     let mut deleted = 0;
@@ -82,4 +88,5 @@ fn main() {
         1 => println!("Deleted 1 repository"),
         _ => println!("Deleted {} repositories", deleted),
     }
+    0
 }
